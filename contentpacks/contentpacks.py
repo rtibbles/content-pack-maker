@@ -74,6 +74,10 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
 
 
 def _combine_catalogs(*catalogs):
+    """
+    Combine the messages found in *catalogs. Return a single catalog
+    with all their messages.
+    """
     catalog = Catalog()
 
     for oldcatalog in catalogs:
