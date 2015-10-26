@@ -1,7 +1,10 @@
+import json
+
+import requests
 import vcr
 from babel.messages.catalog import Catalog
 from hypothesis import assume, given
-from hypothesis.strategies import integers, sampled_from, text, lists, tuples
+from hypothesis.strategies import integers, lists, sampled_from, text, tuples
 
 from contentpacks.contentpacks import _combine_catalogs, _get_video_ids, \
     retrieve_translations
@@ -48,8 +51,27 @@ class Test__combine_catalogs:
 class Test__get_video_ids:
 
     @given(lists(tuples(text(min_size=1), sampled_from(["Exercise", "Video", "Topic"]))))
-    def test_given_singleton_returns_only_videos(self, contents):
+    def test_given_list_returns_only_videos(self, contents):
         content = {id: {"kind": kind} for id, kind in contents}
         video_count = len([id for id in content if content[id]["kind"] == "Video"])
 
         assert len(_get_video_ids(content)) == video_count
+
+    @vcr.use_cassette("tests/fixtures/cassettes/kalite/contents.json.yml")
+    def test_returns_something_in_production_json(self):
+        """
+        Since we know that test_given_list_returns_only_videos works, then
+        we only need to check that we return something for the actual contents.json
+        to make sure we're reading the right attributes.
+        """
+        url = "https://github.com/learningequality/ka-lite/raw/master/data/khan/contents.json"
+        resp = requests.get(url)
+        content_data = resp.json()
+
+        assert _get_video_ids(content_data)
+
+
+class Test_retrieve_dubbed_video_mapping:
+
+    def test_(self):
+        pass
