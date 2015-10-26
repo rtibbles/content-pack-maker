@@ -26,23 +26,29 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
     exercise_data = retrieve_kalite_exercise_data()
     topic_data = retrieve_kalite_topic_data()
 
-    subtitle_list = retrieve_subtitles(lang)
+    subtitle_data = retrieve_subtitles(lang)
 
     # retrieve KA Lite po files from CrowdIn
     crowdin_project_name = "ka-lite"
     crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
     includes = [version]
-    kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
+    interface_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
 
-    # retrieve Khan Academy po files from CrowdIn
+    # retrieve Khan Academy po files from CrowdIn used for translating content
     crowdin_project_name = "khanacademy"
     crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
-    includes = [version]
-    ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, includes)
+    content_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key)
+
+    # there is one po file that we need for KA that's used for our exercse interface
+    exercise_interface_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key, "*exercises.shared.po*")
+    interface_catalog = _combine_catalogs(
+        interface_catalog,
+        exercise_interface_catalog,
+    )
 
     dubbed_video_mapping = retrieve_dubbed_video_mapping(lang)
 
-    return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, kalite_catalog, ka_catalog, dubbed_video_mapping)
+    return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, interface_catalog, content_catalog, dubbed_video_mapping)
 
 
 def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="en", includes="*.po") -> Catalog:
