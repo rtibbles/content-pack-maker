@@ -84,3 +84,10 @@ def _combine_catalogs(*catalogs):
         catalog._messages.update(oldcatalog._messages)
 
     return catalog
+
+
+def _get_video_ids(content_data: dict) -> [str]:
+    """
+    Returns a list of video ids given the KA content dict.
+    """
+    return list(key for key in content_data.keys() if content_data[key]["kind"] == "Video")
