@@ -7,51 +7,6 @@ interactions:
       Connection: [keep-alive]
       User-Agent: [python-requests/2.8.1]
     method: GET
-    uri: https://github.com/learningequality/ka-lite/raw/master/data/khan/contents.json
-  response:
-    body: {string: '<html><body>You are being <a href="https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json">redirected</a>.</body></html>'}
-    headers:
-      Access-Control-Allow-Origin: ['https://render.githubusercontent.com']
-      Age: ['0']
-      Cache-Control: [no-cache]
-      Content-Length: ['155']
-      Content-Security-Policy: ['default-src *; script-src assets-cdn.github.com;
-          object-src assets-cdn.github.com; style-src ''self'' ''unsafe-inline'' ''unsafe-eval''
-          assets-cdn.github.com; img-src ''self'' data: assets-cdn.github.com identicons.github.com
-          www.google-analytics.com checkout.paypal.com collector.githubapp.com *.githubusercontent.com
-          *.gravatar.com *.wp.com; media-src ''none''; frame-src ''self'' render.githubusercontent.com
-          gist.github.com www.youtube.com player.vimeo.com checkout.paypal.com; font-src
-          assets-cdn.github.com; connect-src ''self'' live.github.com wss://live.github.com
-          uploads.github.com status.github.com api.github.com www.google-analytics.com
-          api.braintreegateway.com client-analytics.braintreegateway.com github-cloud.s3.amazonaws.com;
-          base-uri ''self''; form-action ''self'' github.com gist.github.com']
-      Content-Type: [text/html; charset=utf-8]
-      Date: ['Mon, 26 Oct 2015 21:10:42 GMT']
-      Location: ['https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json']
-      Public-Key-Pins: [max-age=300; pin-sha256="WoiWRyIOVNa9ihaBciRSC7XHjliYS9VwUGOIud4PB18=";
-          pin-sha256="JbQbUG5JMJUoI6brnx0x3vZF6jilxsapbXGVfjhN8Fg="; includeSubDomains]
-      Server: [GitHub.com]
-      Status: [302 Found]
-      Strict-Transport-Security: [max-age=31536000; includeSubdomains; preload]
-      Vary: ['X-PJAX, Accept-Encoding']
-      X-Content-Type-Options: [nosniff]
-      X-Frame-Options: [deny]
-      X-GitHub-Request-Id: ['896E73B6:0948:2130144:562E96D1']
-      X-RateLimit-Limit: ['100']
-      X-RateLimit-Remaining: ['100']
-      X-Runtime: ['0.302210']
-      X-Served-By: [d0e230454cb69aa01d4f86fc3a57b17f]
-      X-UA-Compatible: ['IE=Edge,chrome=1']
-      X-XSS-Protection: [1; mode=block]
-    status: {code: 302, message: Found}
-- request:
-    body: null
-    headers:
-      Accept: ['*/*']
-      Accept-Encoding: ['gzip, deflate']
-      Connection: [keep-alive]
-      User-Agent: [python-requests/2.8.1]
-    method: GET
     uri: https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json
   response:
     body:
@@ -23037,9 +22992,9 @@ interactions:
       Content-Length: ['1309381']
       Content-Security-Policy: [default-src 'none']
       Content-Type: [text/plain; charset=utf-8]
-      Date: ['Mon, 26 Oct 2015 21:10:43 GMT']
+      Date: ['Tue, 27 Oct 2015 17:44:06 GMT']
       ETag: ['"8197e5f99260546e39c4db53f2b1a48878413ad1"']
-      Expires: ['Mon, 26 Oct 2015 21:15:43 GMT']
+      Expires: ['Tue, 27 Oct 2015 17:49:06 GMT']
       Source-Age: ['1']
       Strict-Transport-Security: [max-age=31536000]
       Vary: ['Authorization,Accept-Encoding']
@@ -23048,8 +23003,8 @@ interactions:
       X-Cache-Hits: ['0']
       X-Content-Type-Options: [nosniff]
       X-Frame-Options: [deny]
-      X-GitHub-Request-Id: ['C71B4F21:7988:3571DDF:562E96D1']
-      X-Served-By: [cache-lax1422-LAX]
+      X-GitHub-Request-Id: ['17EB2F21:094B:8043D16:562FB7E4']
+      X-Served-By: [cache-sjc3131-SJC]
       X-XSS-Protection: [1; mode=block]
     status: {code: 200, message: OK}
 version: 1
