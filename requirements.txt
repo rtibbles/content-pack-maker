@@ -1,3 +1,4 @@
+Babel==2.1.1
 elpy==1.9.0
 flake8==2.4.1
 hypothesis==1.11.4
@@ -12,8 +13,10 @@ polib==1.0.7
 py==1.4.30
 pyflakes==0.8.1
 pytest==2.8.2
+pytz==2015.6
 PyYAML==3.11
 requests==2.8.1
 six==1.10.0
+ujson==1.33
 vcrpy==1.7.4
 wrapt==1.10.5
