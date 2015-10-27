@@ -1,5 +1,3 @@
-import json
-
 import requests
 import vcr
 from babel.messages.catalog import Catalog
@@ -7,7 +5,7 @@ from hypothesis import assume, given
 from hypothesis.strategies import integers, lists, sampled_from, text, tuples
 
 from contentpacks.contentpacks import _combine_catalogs, _get_video_ids, \
-    retrieve_translations
+    retrieve_translations, retrieve_kalite_content_data
 
 
 class Test_retrieve_translations:
@@ -71,7 +69,9 @@ class Test__get_video_ids:
         assert _get_video_ids(content_data)
 
 
-class Test_retrieve_dubbed_video_mapping:
+class Test_retrieve_kalite_content_data:
 
-    def test_(self):
-        pass
+    @vcr.use_cassette("tests/fixtures/cassettes/kalite/contents.json.yml")
+    def test_returns_dict(self):
+        content_data = retrieve_kalite_content_data()
+        assert isinstance(content_data, dict)

@@ -91,3 +91,16 @@ def _get_video_ids(content_data: dict) -> [str]:
     Returns a list of video ids given the KA content dict.
     """
     return list(key for key in content_data.keys() if content_data[key]["kind"] == "Video")
+
+
+def retrieve_kalite_content_data(url=None) -> dict:
+    """
+    Retrieve the KA Lite contents.json file in the master branch.  If
+    url is given, download from that url instead.
+    """
+    if not url:
+        url = "https://raw.githubusercontent.com/learningequality/ka-lite/master/data/khan/contents.json"
+
+    path = download_and_cache_file(url)
+    with open(path) as f:
+        return json.load(f)
