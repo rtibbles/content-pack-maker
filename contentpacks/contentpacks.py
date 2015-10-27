@@ -46,7 +46,8 @@ def retrieve_language_resources(lang: str, version: str) -> LangpackResources:
         exercise_interface_catalog,
     )
 
-    dubbed_video_mapping = retrieve_dubbed_video_mapping(lang)
+    video_ids = _get_video_ids(content_data)
+    dubbed_video_mapping = retrieve_dubbed_video_mapping(video_ids, lang)
 
     return LangpackResources(topic_data, content_data, exercise_data, subtitle_data, interface_catalog, content_catalog, dubbed_video_mapping)
 
