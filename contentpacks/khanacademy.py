@@ -54,17 +54,27 @@ POEntry_class.old_merge = POEntry_class.merge
 POEntry_class.merge = new_merge
 
 
-def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool) -> LangpackResources:
-    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True)
+def retrieve_ka_content_resources(sublangargs: dict):
+    # retrieve KA Lite po files from CrowdIn
+    interface_lang = sublangargs["interface_lang"]
+    if interface_lang == "en":
+        ka_catalog = Catalog()
+    else:
+        # retrieve Khan Academy po files from CrowdIn
+        crowdin_project_name = "khanacademy"
+        crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
+        includes = []
+        ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
+                                           lang_code=sublangargs["interface_lang"], force=True)
 
-    video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
-    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
+    return ka_catalog
 
+
+def retrieve_kalite_interface_resources(version: str, sublangargs: dict):
     # retrieve KA Lite po files from CrowdIn
     interface_lang = sublangargs["interface_lang"]
     if interface_lang == "en":
         kalite_catalog = Catalog()
-        ka_catalog = Catalog()
     else:
         crowdin_project_name = "ka-lite"
         crowdin_secret_key = os.environ["KALITE_CROWDIN_SECRET_KEY"]
@@ -73,12 +83,18 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
         kalite_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
                                                lang_code=sublangargs["interface_lang"], includes=includes, force=True)
 
-        # retrieve Khan Academy po files from CrowdIn
-        crowdin_project_name = "khanacademy"
-        crowdin_secret_key = os.environ["KA_CROWDIN_SECRET_KEY"]
-        includes = []
-        ka_catalog = retrieve_translations(crowdin_project_name, crowdin_secret_key,
-                                           lang_code=sublangargs["interface_lang"], force=True)
+    return kalite_catalog
+
+
+def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool) -> LangpackResources:
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True)
+
+    video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
+    subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
+
+    kalite_catalog = retrieve_kalite_interface_resources(version, sublangargs)
+
+    ka_catalog = retrieve_ka_content_resources(sublangargs)
 
     return LangpackResources(node_data, subtitle_data, kalite_catalog, ka_catalog)
 

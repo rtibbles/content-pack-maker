@@ -123,6 +123,24 @@ def download_and_cache_file(url: str, path: str, headers: dict={}) -> str:
     return path
 
 
+@cache_file
+def extract_and_cache_file(zf: zipfile.ZipFile, path: str, filename: str= "") -> str:
+    """
+    Extract the given file from the zipfile if it's not saved in cachedir.
+    Returns the path to the file. Always extract the file if ignorecache is True.
+    """
+
+    logging.info("Extracting file {filename}".format(filename=filename))
+
+    zf.extract(filename, path)
+
+    with open(path, "wb") as f:
+        for chunk in r.iter_content(1024):
+            f.write(chunk)
+
+    return path
+
+
 def translate_nodes(nodes: list, catalog: Catalog) -> list:
     """Translates all fields across all nodes:
 
@@ -268,7 +286,7 @@ def remove_unavailable_topics(nodes):
     return node_list
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles, html_exercise_path):
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles, html_exercise_path=None, content_path=None):
 
     # make sure dest's parent directories exist
     pathlib.Path(dest).parent.mkdir(parents=True, exist_ok=True)
@@ -299,10 +317,11 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         save_catalog(backend_catalog, zf, "backend.mo")
         # save_subtitles(subtitle_path, zf)
 
-        try:                    # sometimes we have no html exercises
-            save_html_exercises(html_exercise_path, zf)
-        except FileNotFoundError:
-            logging.warning("No html exercises found; skipping.")
+        if html_exercise_path:
+            try:                    # sometimes we have no html exercises
+                save_html_exercises(html_exercise_path, zf)
+            except FileNotFoundError:
+                logging.warning("No html exercises found; skipping.")
 
         save_db(db, zf)
 
