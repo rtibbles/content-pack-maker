@@ -100,7 +100,7 @@ def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: b
 
 
 @cache_file
-def retrieve_subtitle_meta_data(url, path):
+def retrieve_subtitle_meta_data(url, path, **kwargs):
 
     try:
         response = requests.get(url)
@@ -390,7 +390,7 @@ def create_paths_remove_orphans_and_empty_topics(nodes) -> list:
 
 
 @cache_file
-def download_exercise_data(url, path) -> str:
+def download_exercise_data(url, path, **kwargs) -> str:
     data = requests.get(url)
 
     attempts = 1
@@ -419,7 +419,7 @@ def retrieve_exercise_dict(lang=None, force=False) -> str:
 
 
 @cache_file
-def download_and_clean_kalite_data(url, path, lang="en") -> str:
+def download_and_clean_kalite_data(url, path, lang="en", **kwargs) -> str:
     data = requests.get(url)
     attempts = 1
     while data.status_code != 200 and attempts <= 5:
@@ -574,7 +574,7 @@ def clean_assessment_item(assessment_item) -> dict:
 
 
 @cache_file
-def download_assessment_item_data(url, path, lang=None, force=False) -> str:
+def download_assessment_item_data(url, path, lang=None, force=False, **kwargs) -> str:
     """
     Retrieve assessment item data and save to disk
     :param url: url of assessment item

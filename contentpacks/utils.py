@@ -35,11 +35,9 @@ NODE_FIELDS_TO_TRANSLATE = [
     "display_name",
 ]
 
-
 ASSESSMENT_RESOURCES_ZIP_FOLDER = "khan/"
 
 ASSESSMENT_VERSION_FILENAME = "assessmentitems.version"
-
 
 LANGUAGELOOKUP_DATA = pkgutil.get_data('contentpacks', "resources/languagelookup.json")
 
@@ -85,27 +83,30 @@ def cache_file(func):
     Returns the path to the file. Always download the file if ignorecache is True.
     All decorated functions must only accept 2 args, 'url' and 'path'.
     """
+
     def func_wrapper(url, cachedir=None, ignorecache=False, filename=None, **kwargs):
-            if not cachedir:
-                cachedir = os.path.join(os.getcwd(), "build")
+        if not cachedir:
+            cachedir = os.path.join(os.getcwd(), "build")
 
-            if not filename:
-                filename = os.path.basename(urlparse(url).path)
+        if not filename:
+            filename = os.path.basename(urlparse(url).path)
 
-            path = os.path.join(cachedir, filename)
+        path = os.path.join(cachedir, filename)
 
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
 
-            if ignorecache or not os.path.exists(path):
-                func(url, path, **kwargs)
+        kwargs["filename"] = filename
 
-            return path
+        if ignorecache or not os.path.exists(path):
+            func(url, path, **kwargs)
+
+        return path
 
     return func_wrapper
 
 
 @cache_file
-def download_and_cache_file(url: str, path: str, headers: dict={}) -> str:
+def download_and_cache_file(url: str, path: str, headers: dict = {}, **kwargs) -> str:
     """
     Download the given url if it's not saved in cachedir. Returns the
     path to the file. Always download the file if ignorecache is True.
@@ -124,19 +125,17 @@ def download_and_cache_file(url: str, path: str, headers: dict={}) -> str:
 
 
 @cache_file
-def extract_and_cache_file(zf: zipfile.ZipFile, path: str, filename: str= "") -> str:
+def extract_and_cache_file(zf: zipfile.ZipFile, path: str, **kwargs) -> str:
     """
     Extract the given file from the zipfile if it's not saved in cachedir.
     Returns the path to the file. Always extract the file if ignorecache is True.
     """
 
+    filename = kwargs["filename"]
+
     logging.info("Extracting file {filename}".format(filename=filename))
 
     zf.extract(filename, path)
-
-    with open(path, "wb") as f:
-        for chunk in r.iter_content(1024):
-            f.write(chunk)
 
     return path
 
@@ -258,7 +257,6 @@ def remove_untranslated_exercises(nodes, html_ids, translated_assessment_data):
 
 
 def remove_unavailable_topics(nodes):
-
     node_dict = {node.get("path"): node for node in nodes}
 
     node_list = []
@@ -286,8 +284,8 @@ def remove_unavailable_topics(nodes):
     return node_list
 
 
-def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files, subtitles, html_exercise_path=None, content_path=None):
-
+def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadata, assessment_items, assessment_files,
+                         subtitles, html_exercise_path=None, content_path=None):
     # make sure dest's parent directories exist
     pathlib.Path(dest).parent.mkdir(parents=True, exist_ok=True)
 
@@ -297,10 +295,10 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
 
         nodes = convert_dicts_to_models(nodes)
         nodes = mark_exercises_as_available(nodes)
-        nodes = list(save_models(nodes, db)) # we have to make sure to force
-                                             # the evaluation of each
-                                             # save_models call, in order to
-                                             # avoid nesting them.
+        nodes = list(save_models(nodes, db))  # we have to make sure to force
+        # the evaluation of each
+        # save_models call, in order to
+        # avoid nesting them.
         nodes = list(populate_parent_foreign_keys(nodes))
         list(save_models(nodes, db))
 
@@ -318,7 +316,7 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
         # save_subtitles(subtitle_path, zf)
 
         if html_exercise_path:
-            try:                    # sometimes we have no html exercises
+            try:  # sometimes we have no html exercises
                 save_html_exercises(html_exercise_path, zf)
             except FileNotFoundError:
                 logging.warning("No html exercises found; skipping.")
@@ -478,7 +476,8 @@ def populate_parent_foreign_keys(nodes):
             node.parent = parent
         except KeyError:
             orphan_count += 1
-            logging.warning("{path} is an orphan. (number {orphan_count})".format(path=node.path, orphan_count=orphan_count))
+            logging.warning(
+                "{path} is an orphan. (number {orphan_count})".format(path=node.path, orphan_count=orphan_count))
 
         yield node
 
@@ -488,8 +487,8 @@ def save_db(db, zf):
 
 
 def save_assessment_file(assessment_file, zf):
-        zf.write(assessment_file, os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, os.path.basename(os.path.dirname(
-            assessment_file)), os.path.basename(assessment_file)))
+    zf.write(assessment_file, os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, os.path.basename(os.path.dirname(
+        assessment_file)), os.path.basename(assessment_file)))
 
 
 def separate_exercise_types(node_data):
@@ -558,7 +557,6 @@ def save_metadata(zf, metadata):
 
 
 def recurse_availability_up_tree(nodes, db) -> [Item]:
-
     logging.info("Marking availability.")
 
     nodes = list(nodes)
@@ -578,7 +576,9 @@ def recurse_availability_up_tree(nodes, db) -> [Item]:
 
         total_files = children.aggregate(fn.SUM(Item.total_files))
 
-        child_remote = children.where(((Item.available == False) & (Item.kind != "Topic")) | (Item.kind == "Topic")).aggregate(fn.SUM(Item.remote_size))
+        child_remote = children.where(
+            ((Item.available == False) & (Item.kind != "Topic")) | (Item.kind == "Topic")).aggregate(
+            fn.SUM(Item.remote_size))
         child_on_disk = children.aggregate(fn.SUM(Item.size_on_disk))
 
         if parent.available != available:
@@ -611,7 +611,7 @@ def recurse_availability_up_tree(nodes, db) -> [Item]:
 
 def is_video_node_dubbed(video_node: dict, expected_lang: str) -> bool:
     assert 'translated_youtube_lang' in video_node, "We need the " \
-        "translated_youtube_lang attribute to figure out if a video is dubbed!"
+                                                    "translated_youtube_lang attribute to figure out if a video is dubbed!"
 
     video_lang = video_node['translated_youtube_lang']
     return get_primary_language(video_lang) == get_primary_language(expected_lang)
@@ -625,12 +625,12 @@ def get_primary_language(lang):
     the language code.
 
     """
-    if len(lang) <= 2:          # Already only the primary language
+    if len(lang) <= 2:  # Already only the primary language
         return lang
     else:
         # lang is something like pt-BR
         # Split the lang code into two parts (pt, BR)
         # And return the first part (pt)
-        return lang.\
-            split("-")\
+        return lang. \
+            split("-") \
             [0]

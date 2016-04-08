@@ -19,7 +19,6 @@ Usage:
 
 """
 import os
-
 from docopt import docopt
 from pathlib import Path
 from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_video_map, retrieve_html_exercises, \
@@ -30,8 +29,11 @@ from contentpacks.utils import translate_nodes, \
 from contentpacks.import_channel import retrieve_import_data
 import logging
 
-def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles, no_assessment_resources):
-    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, no_subtitles)
+
+def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles,
+                       no_assessment_resources):
+    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs,
+                                                                                               no_subtitles)
 
     subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
 
@@ -48,15 +50,18 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
         no_item_resources=no_assessment_resources
     )
 
-    assessment_data = list(translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data
+    assessment_data = list(
+        translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data
 
-    node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids, assessment_data) if lang != "en" else node_data
+    node_data = remove_untranslated_exercises(node_data, translated_html_exercise_ids,
+                                              assessment_data) if lang != "en" else node_data
 
     pack_metadata = generate_kalite_language_pack_metadata(lang, version, interface_catalog, content_catalog, subtitles,
                                                            dubbed_video_count)
 
     bundle_language_pack(str(filename), node_data, interface_catalog, interface_catalog,
-                         pack_metadata, assessment_data, all_assessment_files, subtitle_paths, html_exercise_path=html_exercise_path)
+                         pack_metadata, assessment_data, all_assessment_files, subtitle_paths,
+                         html_exercise_path=html_exercise_path)
 
 
 def make_imported_content_pack(lang, version, sublangargs, filename, path, channel):
@@ -116,7 +121,7 @@ def main():
             make_imported_content_pack(lang, version, sublangs, out, path, channel)
         else:
             raise Exception("Sorry, no valid content pack type specified.")
-    except Exception:           # This is allowed, since we want to potentially debug all errors
+    except Exception:  # This is allowed, since we want to potentially debug all errors
         import os
         if not os.environ.get("DEBUG"):
             raise
