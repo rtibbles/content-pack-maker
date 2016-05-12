@@ -62,7 +62,7 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
 def make_imported_content_pack(lang, version, sublangargs, filename, path, channel):
     node_data, assessment_data, all_assessment_files = retrieve_import_data(path, channel)
 
-    interface_catalog = retrieve_kalite_interface_resources(version, sublangargs)
+    interface_catalog = Catalog() #retrieve_kalite_interface_resources(version, sublangargs)
 
     content_catalog = Catalog()
 

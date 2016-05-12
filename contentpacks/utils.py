@@ -96,6 +96,8 @@ def cache_file(func):
 
             os.makedirs(os.path.dirname(path), exist_ok=True)
 
+            kwargs["filename"] = filename
+
             if ignorecache or not os.path.exists(path):
                 func(url, path, **kwargs)
 
@@ -105,7 +107,7 @@ def cache_file(func):
 
 
 @cache_file
-def download_and_cache_file(url: str, path: str, headers: dict={}) -> str:
+def download_and_cache_file(url: str, path: str, headers: dict={}, **kwargs) -> str:
     """
     Download the given url if it's not saved in cachedir. Returns the
     path to the file. Always download the file if ignorecache is True.
@@ -124,19 +126,17 @@ def download_and_cache_file(url: str, path: str, headers: dict={}) -> str:
 
 
 @cache_file
-def extract_and_cache_file(zf: zipfile.ZipFile, path: str, filename: str= "") -> str:
+def extract_and_cache_file(zf: zipfile.ZipFile, path: str, **kwargs) -> str:
     """
     Extract the given file from the zipfile if it's not saved in cachedir.
     Returns the path to the file. Always extract the file if ignorecache is True.
     """
+    
+    filename = kwargs["filename"]
 
     logging.info("Extracting file {filename}".format(filename=filename))
 
     zf.extract(filename, path)
-
-    with open(path, "wb") as f:
-        for chunk in r.iter_content(1024):
-            f.write(chunk)
 
     return path
 
