@@ -4,11 +4,8 @@ import hashlib
 import shutil
 import copy
 import zipfile
-
 from slugify import slugify
-
 import logging
-
 from contentpacks.utils import extract_and_cache_file
 
 slug_key = {
@@ -40,7 +37,6 @@ iconfilepath = "/images/power-mode/badges/"
 iconextension = "-40x40.png"
 defaulticon = "default"
 
-
 file_kind_dictionary = {
     "Video": ["mp4", "mov", "3gp", "amv", "asf", "asx", "avi", "mpg", "swf", "wmv"],
     "Image": ["tif", "bmp", "png", "jpg", "jpeg"],
@@ -70,6 +66,7 @@ file_meta_data_map = {
     "codec": lambda x: getattr(x, "codec", None),
 }
 
+
 def file_md5(namespace, file_path):
     m = hashlib.md5()
     m.update(namespace.encode("UTF-8"))
@@ -80,6 +77,7 @@ def file_md5(namespace, file_path):
                 break
             m.update(chunk.encode("UTF-8"))
     return m.hexdigest()
+
 
 def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
     """Return list of dictionaries of subdirectories and/or files in the location"""
@@ -123,7 +121,8 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
         # Finally, can add contains
         contains = set([])
         for file in sorted(os.listdir(location)):
-            child, sort_order = construct_node(os.path.join(location, file), current_path, node_cache, channel, sort_order=sort_order)
+            child, sort_order = construct_node(os.path.join(location, file), current_path, node_cache, channel,
+                                               sort_order=sort_order)
             if child:
                 contains = contains.union(child.get("contains", set()))
                 contains = contains.union({child["kind"]})
@@ -163,7 +162,9 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
             except KeyError:
                 data_meta = {}
                 logging.debug("No exercise metadata available in zipfile")
-            meta_data.update(data_meta)
+            # Assume information in an external metadata file is more up to date than the internal one.
+            data_meta.update(meta_data)
+            meta_data = data_meta
             try:
                 assessment_items = json.loads(zf.read("assessment_items.json").decode(encoding='UTF-8'))
                 items = []
@@ -183,7 +184,6 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
                 if filename and os.path.splitext(filename)[0] != "json":
                     node_cache["AssessmentFiles"].add(extract_and_cache_file(zf, filename=filename))
 
-
         id = file_md5(channel, location)
 
         node.update({
@@ -194,7 +194,7 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
         if kind != "Exercise":
             node.update({
                 "format": extension,
-                })
+            })
             # Copy over content
             content_dir = os.path.join(os.path.join(os.getcwd(), "build", "content"))
             if not os.path.exists(content_dir):
@@ -203,7 +203,6 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
             logging.debug("%s file %s to local content directory." % ("Copied", slug))
 
         node.update(meta_data)
-
 
     # Verify some required fields:
     if "title" not in node:
@@ -229,7 +228,6 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
 
 
 def annotate_related_content(node_data):
-
     slug_cache = {item.get("slug"): item for item in node_data}
 
     for item in node_data:
@@ -255,7 +253,6 @@ def annotate_related_content(node_data):
 
 
 def retrieve_import_data(path=None, channel=None):
-
     if not os.path.isdir(path):
         raise Exception("The specified path is not a valid directory")
 
@@ -279,4 +276,3 @@ def retrieve_import_data(path=None, channel=None):
     annotate_related_content(node_data)
 
     return node_data, assessment_items, assessment_files
-
