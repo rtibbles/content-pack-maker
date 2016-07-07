@@ -16,6 +16,7 @@ Usage:
 --no-subtitles                 If specified, will omit downloading and including any subtitles.
 --no-assessment-items          If specified, will omit downloading and including any assessment item data.
 --no-assessment-resources      If specified, will omit downloading and including any resources (images, json files) needed to render assessment item exercises.
+--no-dubbed-videos             If specified, will omit including dubbed video mappings
 
 """
 import os
@@ -25,15 +26,14 @@ from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_v
     retrieve_all_assessment_item_data, retrieve_kalite_interface_resources, CONTENT_BY_READABLE_ID
 from contentpacks.utils import translate_nodes, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
-    generate_kalite_language_pack_metadata, translate_assessment_item_text, Catalog
+    generate_kalite_language_pack_metadata, translate_assessment_item_text, \
+    remove_assessment_data_with_empty_widgets, remove_nonexistent_assessment_items_from_exercises
 from contentpacks.import_channel import retrieve_import_data
 import logging
 
 
-def make_language_pack(lang, version, sublangargs, filename, no_assessment_items, no_subtitles,
-                       no_assessment_resources):
-    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs,
-                                                                                               no_subtitles)
+def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos):
+    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, ka_domain, no_subtitles, no_dubbed_videos)
 
     subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
 
@@ -47,8 +47,11 @@ def make_language_pack(lang, version, sublangargs, filename, no_assessment_items
     # now include only the assessment item resources that we need
     all_assessment_data, all_assessment_files = retrieve_all_assessment_item_data(
         no_item_data=no_assessment_items,
-        no_item_resources=no_assessment_resources
+        no_item_resources=no_assessment_resources,
+        lang=lang,
     )
+    all_assessment_data = list(remove_assessment_data_with_empty_widgets(all_assessment_data))
+    node_data = remove_nonexistent_assessment_items_from_exercises(node_data, all_assessment_data)
 
     assessment_data = list(
         translate_assessment_item_text(all_assessment_data, content_catalog)) if lang != "en" else all_assessment_data
@@ -94,17 +97,21 @@ def normalize_sublang_args(args):
 
 
 def main():
+    import os
     args = docopt(__doc__)
 
     lang = args["<lang>"]
     version = args["<version>"]
     out = Path(args["--out"]) if args['--out'] else Path.cwd() / "{lang}.zip".format(lang=lang)
 
+    ka_domain = os.environ.get("KA_DOMAIN") or "www.khanacademy.org"
+
     sublangs = normalize_sublang_args(args)
 
     no_assessment_items = args["--no-assessment-items"]
     no_assessment_resources = args['--no-assessment-resources']
     no_subtitles = args['--no-subtitles']
+    no_dubbed_videos = args['--no-dubbed-videos']
 
     log_file = args["--logging"] or "debug.log"
 
@@ -112,7 +119,7 @@ def main():
 
     try:
         if args["ka-lite"]:
-            make_language_pack(lang, version, sublangs, out, no_assessment_items, no_subtitles, no_assessment_resources)
+            make_language_pack(lang, version, sublangs, out, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos)
         elif args["import"]:
             assert args["<path>"], ("Import path must be specified for importing content packs")
             assert args["<channel>"], ("Import channel name must be specified for importing content packs")
@@ -121,7 +128,7 @@ def main():
             make_imported_content_pack(lang, version, sublangs, out, path, channel)
         else:
             raise Exception("Sorry, no valid content pack type specified.")
-    except Exception:  # This is allowed, since we want to potentially debug all errors
+    except Exception:           # This is allowed, since we want to potentially debug all errors
         import os
         if not os.environ.get("DEBUG"):
             raise

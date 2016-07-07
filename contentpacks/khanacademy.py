@@ -14,16 +14,20 @@ from collections import OrderedDict
 from functools import reduce
 from multiprocessing.pool import ThreadPool
 import itertools
+import time
 import polib
 import requests
 import json
 import ujson
+import pkgutil
+import sys
 
 from math import ceil, log, exp
 
 from contentpacks.utils import NodeType, download_and_cache_file, Catalog, cache_file,\
-    is_video_node_dubbed
+    is_video_node_dubbed, get_lang_name, NodeType
 from contentpacks.models import AssessmentItem
+from contentpacks.generate_dubbed_video_mappings import main, DUBBED_VIDEOS_MAPPING_FILEPATH
 
 NUM_PROCESSES = 5
 
@@ -86,8 +90,8 @@ def retrieve_kalite_interface_resources(version: str, sublangargs: dict):
     return kalite_catalog
 
 
-def retrieve_language_resources(version: str, sublangargs: dict, no_subtitles: bool) -> LangpackResources:
-    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True)
+def retrieve_language_resources(version: str, sublangargs: dict, ka_domain: str, no_subtitles: bool, no_dubbed_videos: bool) -> LangpackResources:
+    node_data = retrieve_kalite_data(lang=sublangargs["content_lang"], force=True, ka_domain=ka_domain, no_dubbed_videos=no_dubbed_videos)
 
     video_ids = [node.get("id") for node in node_data if node.get("kind") == "Video"]
     subtitle_data = retrieve_subtitles(video_ids, sublangargs["subtitle_lang"]) if not no_subtitles else {}
@@ -141,7 +145,7 @@ def retrieve_subtitles(videos: list, lang="en", force=False, threads=NUM_PROCESS
             subtitle_path = download_and_cache_file(subtitle_download_uri, filename=filename, ignorecache=False)
             logging.info("subtitle path: {}".format(subtitle_path))
             return youtube_id, subtitle_path
-        except (requests.HTTPError, KeyError, urllib.error.HTTPError, urllib.error.URLError) as e:
+        except (requests.exceptions.RequestException, KeyError, urllib.error.HTTPError, urllib.error.URLError) as e:
             logging.info("got error while downloading subtitles: {}".format(e))
             pass
 
@@ -158,11 +162,28 @@ def retrieve_translations(crowdin_project_name, crowdin_secret_key, lang_code="e
     request_url_template = ("https://api.crowdin.com/api/"
                             "project/{project_id}/download/"
                             "{lang_code}.zip?key={key}")
+    export_url_template = ("https://api.crowdin.com/api/"
+                            "project/{project_id}/export/"
+                            "{lang_code}.zip?key={key}")
     request_url = request_url_template.format(
         project_id=crowdin_project_name,
         lang_code=lang_code,
         key=crowdin_secret_key,
     )
+    export_url = request_url_template.format(
+        project_id=crowdin_project_name,
+        lang_code=lang_code,
+        key=crowdin_secret_key,
+    )
+
+    logging.info("requesting CrowdIn to rebuild latest translations.")
+    try:
+        requests.get(export_url)
+    except requests.exceptions.RequestException as e:
+        logging.warning(
+            "Got exception when building CrowdIn translations: {}".format(e)
+        )
+
     logging.debug("Retrieving translations from {}".format(request_url))
     zip_path = download_and_cache_file(request_url, ignorecache=force)
     zip_extraction_path = tempfile.mkdtemp()
@@ -294,8 +315,15 @@ def get_video_id_english_mappings(lang):
         url_template = "http://www.khanacademy.org/api/v2/topics/topictree?projection={projection}"
         url = url_template.format(lang=lang, projection=json.dumps(projection))
 
-        r = requests.get(url)
-        r.raise_for_status()
+        while 1:
+            try:
+                r = requests.get(url)
+                r.raise_for_status()
+                break
+            except requests.exceptions.HTTPError as e:
+                logging.warning("Got an error from Khan Academy requesting from their topic tree url: {}".format(e))
+                logging.warning("Trying again.")
+
         english_video_data = r.json()
         english_video_data = english_video_data["videos"]
 
@@ -420,14 +448,22 @@ def retrieve_exercise_dict(lang=None, force=False) -> str:
 
 @cache_file
 def download_and_clean_kalite_data(url, path, lang="en", **kwargs) -> str:
-    data = requests.get(url)
     attempts = 1
-    while data.status_code != 200 and attempts <= 5:
+    while attempts < 100:
         data = requests.get(url)
-        attempts += 1
+        try:
+            data.raise_for_status()
+            break
+        except requests.RequestException as e:
+            logging.warning("Attempt {attempt}: Got error while requesting KA data: {e!s:<80}".format(
+                attempt=attempts,
+                e=e)
+            )
+            attempts += 1
+            time.sleep(10)
+            continue
 
-    if data.status_code != 200:
-        raise requests.RequestException("Got error requesting KA data: {}".format(data.content))
+    data.raise_for_status()     # make sure that when we get here, there are no more errors from KA.
 
     node_data = ujson.loads(data.content)
 
@@ -542,12 +578,18 @@ video_attributes = [
     'youtubeId'
 ]
 
+en_lang_code = "en"
 
-def retrieve_kalite_data(lang="en", force=False) -> list:
+
+def retrieve_kalite_data(lang=en_lang_code, force=False, ka_domain=None, no_dubbed_videos=False) -> list:
     """
     Retrieve the KA content data direct from KA.
     """
-    url = "http://www.khanacademy.org/api/v2/topics/topictree?lang={lang}&projection={projection}"
+
+    if not ka_domain:
+        ka_domain = "www.khanacademy.org"
+
+    lang_url = "http://{ka_domain}/api/v2/topics/topictree?lang={lang}&projection={projection}"
 
     projection = OrderedDict([
         ("topics", [OrderedDict((key, 1) for key in topic_attributes)]),
@@ -555,13 +597,82 @@ def retrieve_kalite_data(lang="en", force=False) -> list:
         ("videos", [OrderedDict((key, 1) for key in video_attributes)])
     ])
 
-    url = url.format(projection=json.dumps(projection), lang=lang)
+    url = lang_url.format(projection=json.dumps(projection), lang=lang, ka_domain=ka_domain)
 
     node_data_path = download_and_clean_kalite_data(url, lang=lang, ignorecache=force, filename="nodes.json")
 
     with open(node_data_path, 'r') as f:
         node_data = ujson.load(f)
 
+    if not lang == en_lang_code and not no_dubbed_videos:
+        # Generate en_nodes.json json this will be used in dubbed video mappings.
+        # This will cache en_nodes.json
+        url = lang_url.format(projection=json.dumps(projection), lang=en_lang_code, ka_domain=ka_domain)
+        download_and_clean_kalite_data(url, lang=en_lang_code, ignorecache=False, filename="en_nodes.json")
+
+        node_data = addin_dubbed_video_mappings(node_data, lang)
+
+    return node_data
+
+
+def addin_dubbed_video_mappings(node_data, lang=en_lang_code):
+    # Get the dubbed videos from the spreadsheet and substitute them
+    # for the video, and topic attributes of the returned data struct.
+
+    build_path = os.path.join(os.getcwd(), "build")
+
+    # Create a dubbed_video_mappings.json, at build folder.
+    if os.path.exists(os.path.join(build_path, "dubbed_video_mappings.json")):
+        logging.info('Dubbed videos json already exist at %s' % (DUBBED_VIDEOS_MAPPING_FILEPATH))
+    else:
+        main()
+
+    # Get the list of video ids from dubbed video mappings
+    lang_code = get_lang_name(lang).lower()
+    dubbed_videos_path = os.path.join(build_path, "dubbed_video_mappings.json")
+    with open(dubbed_videos_path, 'r') as f:
+        dubbed_videos_load = ujson.load(f)
+
+    dubbed_videos_list = dubbed_videos_load.get(lang_code)
+    # If dubbed_videos_list is None It means that the language code is not available in dubbed video mappings.
+    if not dubbed_videos_list:
+        return node_data
+
+    # Get the current youtube_ids, and topic_paths from the khan api node data.
+    youtube_ids = []
+    topic_paths = []
+    for node in node_data:
+        node_kind = node.get("kind")
+        if node_kind == NodeType.video:
+            youtube_ids.append(node.get("youtube_id"))
+        if node_kind == NodeType.topic:
+            topic_paths.append(node.get("path"))
+
+    en_nodes_path = os.path.join(build_path, "en_nodes.json")
+    with open(en_nodes_path, 'r') as f:
+        en_node_load = ujson.load(f)
+
+    en_node_list = []
+    # The en_nodes.json must be the same data structure to node_data variable from khan api.
+    for node in en_node_load:
+        node_kind = node.get("kind")
+
+        if (node_kind == NodeType.video):
+            youtube_id = node["youtube_id"]
+            if not youtube_id in youtube_ids:
+                if youtube_id in dubbed_videos_list:
+                    node["youtube_id"] = dubbed_videos_list[youtube_id]
+                    node["translated_youtube_lang"] = lang
+                    en_node_list.append(node)
+                    youtube_ids.append(youtube_id)
+
+        # Append all topics that's not in topic_paths list.
+        if (node_kind == NodeType.topic):
+            if not node["path"] in topic_paths:
+                en_node_list.append(node)
+                topic_paths.append(node["path"])
+
+    node_data += en_node_list
     return node_data
 
 
@@ -722,8 +833,8 @@ def retrieve_assessment_item_data(assessment_item, lang=None, force=False, no_it
         return {}, []
 
     if lang:
-        url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}?lang={lang}".format(lang=lang)
-        filename = "assessment_items/{assessment_item}_{lang}.json".format(lang=lang)
+        url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}?lang={lang}".format(lang=lang, assessment_item=assessment_item)
+        filename = "assessment_items/{assessment_item}_{lang}.json".format(lang=lang, assessment_item=assessment_item)
     else:
         url = "http://www.khanacademy.org/api/v1/assessment_items/{assessment_item}"
         filename = "assessment_items/{assessment_item}.json"
@@ -883,6 +994,7 @@ def apply_dubbed_video_map(content_data: list, subtitles: list, lang: str) -> (l
             item["total_files"] = 1
 
     return content_data, dubbed_count
+
 
 def retrieve_html_exercises(exercises: [str], lang: str, force=False) -> (str, [str]):
     """

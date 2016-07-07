@@ -89,14 +89,14 @@ def cache_file(func):
             cachedir = os.path.join(os.getcwd(), "build")
 
         if not filename:
-            filename = os.path.basename(urlparse(url).path)
+            filename = os.path.basename(urlparse(url).path) + urlparse(url).query
 
         path = os.path.join(cachedir, filename)
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         kwargs["filename"] = filename
-  
+
         if ignorecache or not os.path.exists(path):
             func(url, path, **kwargs)
 
@@ -338,9 +338,13 @@ def bundle_language_pack(dest, nodes, frontend_catalog, backend_catalog, metadat
 
 
 def write_assessment_version(metadata: dict, zf):
-    version = str(metadata.get("software_version", "xx.xx"))
-    assessment_version_zip_path = os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, ASSESSMENT_VERSION_FILENAME)
-    zf.writestr(assessment_version_zip_path, version)
+    lang = metadata.get("code") or "en"
+    if lang != "en":            # Don't write the assessment version for non-en lang packs
+        return
+    else:
+        version = str(metadata.get("software_version", "xx.xx"))
+        assessment_version_zip_path = os.path.join(ASSESSMENT_RESOURCES_ZIP_FOLDER, ASSESSMENT_VERSION_FILENAME)
+        zf.writestr(assessment_version_zip_path, version)
 
 
 def save_html_exercises(html_exercise_path, zf):
@@ -519,7 +523,7 @@ def generate_kalite_language_pack_metadata(lang: str, version: str, interface_ca
     metadata = {
         "code": lang,
         'software_version': version,
-        'language_pack_version': 1,
+        'language_pack_version': int(os.environ.get("CONTENT_PACK_VERSION") or "1"),
         'percent_translated': interface_catalog.percent_translated,
         'topic_tree_translated': content_catalog.percent_translated,
         'subtitle_count': len(subtitles),
@@ -636,3 +640,45 @@ def get_primary_language(lang):
         return lang. \
             split("-") \
             [0]
+
+
+def remove_assessment_data_with_empty_widgets(assessment_data):
+    outed = 0
+    for assessment in assessment_data:
+        try:
+            assessment_id = assessment.get("id")
+            item_data = ujson.loads(assessment["item_data"])
+            question_data = item_data["question"]
+
+            if question_data.get("widgets"):
+                yield assessment
+            else:
+                outed += 1
+                logging.warning("Filtering out assessment {}. Count: {}".format(assessment_id, outed))
+        except KeyError as e:
+            logging.warning("Got error when checking widgets for assessment data {id}: {e}".format(
+                id=assessment_id,
+                e=e)
+            )
+
+
+def remove_nonexistent_assessment_items_from_exercises(node_data: list, assessment_data: iter):
+    assessment_ids = set(assessment["id"] for assessment in assessment_data)
+
+    for node in node_data:
+        if node["kind"] != NodeType.exercise:
+            yield node
+        else:
+            # import pdb; pdb.set_trace()
+            try:
+                assessment_items = node["all_assessment_items"]
+                new_assessment_items = []
+                for item in assessment_items:
+                    ass_id = item["id"]
+                    if ass_id in assessment_ids:
+                        new_assessment_items.append(item)
+                node["all_assessment_items"] = new_assessment_items
+                yield node
+            except Exception as e:
+                import pdb; pdb.set_trace()
+                print(1)
