@@ -162,9 +162,12 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
             except KeyError:
                 data_meta = {}
                 logging.debug("No exercise metadata available in zipfile")
-            # Assume information in an external metadata file is more up to date than the internal one.
+            description = data_meta.get("description", "")
+            # Can't make any assumptions here, but seems like the description inside the exercise is preferred.
             data_meta.update(meta_data)
             meta_data = data_meta
+            if description:
+                meta_data["description"] = description
             try:
                 assessment_items = json.loads(zf.read("assessment_items.json").decode(encoding='UTF-8'))
                 items = []
