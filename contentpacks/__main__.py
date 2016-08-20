@@ -27,13 +27,17 @@ from contentpacks.khanacademy import retrieve_language_resources, apply_dubbed_v
 from contentpacks.utils import translate_nodes, \
     remove_untranslated_exercises, bundle_language_pack, separate_exercise_types, \
     generate_kalite_language_pack_metadata, translate_assessment_item_text, \
-    remove_assessment_data_with_empty_widgets, remove_nonexistent_assessment_items_from_exercises
+    remove_assessment_data_with_empty_widgets, remove_nonexistent_assessment_items_from_exercises, \
+    Catalog
 from contentpacks.import_channel import retrieve_import_data
 import logging
 
 
-def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos):
-    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs, ka_domain, no_subtitles, no_dubbed_videos)
+def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_assessment_items, no_subtitles,
+                       no_assessment_resources, no_dubbed_videos):
+    node_data, subtitle_data, interface_catalog, content_catalog = retrieve_language_resources(version, sublangargs,
+                                                                                               ka_domain, no_subtitles,
+                                                                                               no_dubbed_videos)
 
     subtitles, subtitle_paths = subtitle_data.keys(), subtitle_data.values()
 
@@ -70,7 +74,7 @@ def make_language_pack(lang, version, sublangargs, filename, ka_domain, no_asses
 def make_imported_content_pack(lang, version, sublangargs, filename, path, channel):
     node_data, assessment_data, all_assessment_files = retrieve_import_data(path, channel)
 
-    interface_catalog = Catalog() #retrieve_kalite_interface_resources(version, sublangargs)
+    interface_catalog = retrieve_kalite_interface_resources(version, sublangargs)
 
     content_catalog = Catalog()
 
@@ -119,7 +123,8 @@ def main():
 
     try:
         if args["ka-lite"]:
-            make_language_pack(lang, version, sublangs, out, ka_domain, no_assessment_items, no_subtitles, no_assessment_resources, no_dubbed_videos)
+            make_language_pack(lang, version, sublangs, out, ka_domain, no_assessment_items, no_subtitles,
+                               no_assessment_resources, no_dubbed_videos)
         elif args["import"]:
             assert args["<path>"], ("Import path must be specified for importing content packs")
             assert args["<channel>"], ("Import channel name must be specified for importing content packs")
@@ -128,7 +133,7 @@ def main():
             make_imported_content_pack(lang, version, sublangs, out, path, channel)
         else:
             raise Exception("Sorry, no valid content pack type specified.")
-    except Exception:           # This is allowed, since we want to potentially debug all errors
+    except Exception:  # This is allowed, since we want to potentially debug all errors
         import os
         if not os.environ.get("DEBUG"):
             raise
