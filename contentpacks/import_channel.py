@@ -172,11 +172,12 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
                 assessment_items = json.loads(zf.read("assessment_items.json").decode(encoding='UTF-8'))
                 items = []
                 for assessment_item in assessment_items:
+
                     md5 = hashlib.md5()
                     md5.update(str(assessment_item).encode("UTF-8"))
                     items.append({
                         "id": md5.hexdigest(),
-                        "item_data": json.dumps(assessment_item),
+                        "item_data": json.dumps(assessment_item).replace("&#x27;", "'"),
                         "author_names": ""
                     })
                 assessment_items = items
