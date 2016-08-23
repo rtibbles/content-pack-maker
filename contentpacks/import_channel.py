@@ -7,6 +7,7 @@ import zipfile
 from slugify import slugify
 import logging
 from contentpacks.utils import extract_and_cache_file
+from contentpacks.khanacademy import localize_all_local_urls
 
 slug_key = {
     "Topic": "slug",
@@ -180,7 +181,7 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
                         "item_data": json.dumps(assessment_item).replace("&#x27;", "'"),
                         "author_names": ""
                     })
-                assessment_items = items
+                assessment_items = localize_all_local_urls(items)
                 node["uses_assessment_items"] = True
             except KeyError:
                 logging.debug("No assessment items found in zipfile")

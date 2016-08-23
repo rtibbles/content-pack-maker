@@ -734,11 +734,17 @@ def _old_graphie_url_to_content_url(matchobj):
     return "web+graphie:" + _get_path_from_filename(matchobj.group("filename"))
 
 
+def _old_local_url_to_content_url(matchobj):
+    return _get_path_from_filename(matchobj.group("filename"))
+
+
 IMAGE_URL_REGEX = re.compile('https?://[\w\.\-\/]+\/(?P<filename>[\w\.\-%]+\.(png|gif|jpg|jpeg|svg))',
                              flags=re.IGNORECASE)
 
 WEB_GRAPHIE_URL_REGEX = re.compile('web\+graphie://ka\-perseus\-graphie\.s3\.amazonaws\.com\/(?P<filename>\w+)',
                                    flags=re.IGNORECASE)
+
+WEB_LOCAL_URL_REGEX = re.compile('web\+local://(?P<filename>\w+)', flags=re.IGNORECASE)
 
 IMAGE_URLS_NOT_TO_REPLACE = {"http://www.dogs.com/photo.jpg",
                              "https://www.kasandbox.org/programming-images/creatures/OhNoes.png"}
@@ -784,6 +790,16 @@ def find_all_graphie_urls(item):
         yield base_filename + "-data.json"
 
 
+def localize_all_local_urls(items):
+    # we copy so we make sure we don't modify the items passed in to this function
+    newitems = copy.deepcopy(items)
+
+    for item in newitems.itervalues():
+        item['item_data'] = localize_local_urls(item['item_data'], channel=channel)
+
+    return newitems
+
+
 def localize_graphie_urls(item):
     item["item_data"] = re.sub(WEB_GRAPHIE_URL_REGEX, _old_graphie_url_to_content_url, item["item_data"])
     return item
@@ -792,6 +808,11 @@ def localize_graphie_urls(item):
 def localize_content_links(item):
     item["item_data"] = re.sub(CONTENT_LINK_REGEX, _old_content_links_to_local_links, item["item_data"])
     item["item_data"] = re.sub(CONTENT_URL_REGEX, _old_content_links_to_local_links, item["item_data"])
+    return item
+
+
+def localize_local_urls(item):
+    item["item_data"] = re.sub(WEB_LOCAL_URL_REGEX, _old_local_url_to_content_url, item["item_data"])
     return item
 
 
