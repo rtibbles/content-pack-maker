@@ -793,7 +793,7 @@ def find_all_graphie_urls(item):
 def localize_all_local_urls(items):
 
     for item in items:
-        item['item_data'] = localize_local_urls(item['item_data'], channel=channel)
+        item['item_data'] = localize_local_urls(item['item_data'])
 
     return items
 
