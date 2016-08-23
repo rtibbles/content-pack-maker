@@ -186,7 +186,7 @@ def construct_node(location, parent_path, node_cache, channel, sort_order=0.0):
             except KeyError:
                 logging.debug("No assessment items found in zipfile")
             for filename in zf.namelist():
-                if filename and os.path.splitext(filename)[0] != "json":
+                if filename and os.path.splitext(filename)[-1] != "json":
                     node_cache["AssessmentFiles"].add(extract_and_cache_file(zf, filename=filename))
 
         id = file_md5(channel, location)

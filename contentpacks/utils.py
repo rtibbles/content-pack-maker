@@ -133,11 +133,9 @@ def extract_and_cache_file(zf: zipfile.ZipFile, path: str, **kwargs) -> str:
     
     filename = kwargs["filename"]
 
-    filename = kwargs["filename"]
-
     logging.info("Extracting file {filename}".format(filename=filename))
 
-    zf.extract(filename, path)
+    zf.extract(filename, os.path.dirname(path))
 
     return path
 
