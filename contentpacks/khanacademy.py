@@ -791,13 +791,11 @@ def find_all_graphie_urls(item):
 
 
 def localize_all_local_urls(items):
-    # we copy so we make sure we don't modify the items passed in to this function
-    newitems = copy.deepcopy(items)
 
-    for item in newitems.itervalues():
+    for item in items:
         item['item_data'] = localize_local_urls(item['item_data'], channel=channel)
 
-    return newitems
+    return items
 
 
 def localize_graphie_urls(item):
