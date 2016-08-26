@@ -746,6 +746,8 @@ WEB_GRAPHIE_URL_REGEX = re.compile('web\+graphie://ka\-perseus\-graphie\.s3\.ama
 
 WEB_LOCAL_URL_REGEX = re.compile('web\+local://(?P<filename>\w+)', flags=re.IGNORECASE)
 
+MEDIA_LOCAL_URL_REGEX = re.compile('/media/(?P<filename>\w+)', flags=re.IGNORECASE)
+
 IMAGE_URLS_NOT_TO_REPLACE = {"http://www.dogs.com/photo.jpg",
                              "https://www.kasandbox.org/programming-images/creatures/OhNoes.png"}
 
@@ -811,6 +813,7 @@ def localize_content_links(item):
 
 def localize_local_urls(item):
     item["item_data"] = re.sub(WEB_LOCAL_URL_REGEX, _old_local_url_to_content_url, item["item_data"])
+    item["item_data"] = re.sub(MEDIA_LOCAL_URL_REGEX, _old_local_url_to_content_url, item["item_data"])
     return item
 
 
